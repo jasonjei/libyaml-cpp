@@ -1,18 +1,14 @@
 ### libyaml-cpp
-*** A lightweight C++ wrapper for libyaml
-
----
-Motivation for the project
+A lightweight C++ wrapper for libyaml 
 
 We wanted to use yaml for our code instead of using the Windows registry. However, the choices for C++ yaml parsing and emitting were limited. One prominent choice would require us to use boost.  However, using libyaml by itself using tokens and lexical parsing also seemed tedious. We wanted a Ruby-esque way to read yaml files.
----
 
 The difficulty of implementing a C++ yaml reader that is like one in Ruby is that we need a single container that can have a vector type, string type, or map type.  Thus, we have a class called MapObject which implements all three types. 
 
 It is up to the user to test that the object type using _type to determine whether the current node is a map, vector, or string.  
 
 For example, you might use it like so to read a YAML file
-
+```
 - name: Ogre
   position: [0, 5, 0]
   powers:
@@ -34,6 +30,7 @@ For example, you might use it like so to read a YAML file
       damage: 50
     - name: Staff
       damage: 3 
+```
 
 ```
 FILE *fh;
