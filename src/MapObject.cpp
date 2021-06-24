@@ -191,7 +191,7 @@ void MapObject::exportYaml(const string& fileName) const {
 	else if (mapObjects.size())
 		yamlSequence(&emitter, &event, mapObjects, flow ? 1 : 0);
 	else {
-		yaml_scalar_event_initialize(&event, NULL, NULL, reinterpret_cast<const yaml_char_t*>(value.c_str()), static_cast<int>(value.length()), 1, 1, YAML_ANY_SCALAR_STYLE);
+		yaml_scalar_event_initialize(&event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(value.c_str())), static_cast<int>(value.length()), 1, 1, YAML_ANY_SCALAR_STYLE);
 		yaml_emitter_emit(&emitter, &event);
 	}
 
@@ -219,7 +219,7 @@ void MapObject::exportYamlWithUserOrder(const string& fileName) const {
 	else if (mapObjects.size())
 		yamlSequenceWithUserOrder(&emitter, &event, mapObjects, flow ? 1 : 0);
 	else {
-		yaml_scalar_event_initialize(&event, NULL, NULL, reinterpret_cast<const yaml_char_t*>(value.c_str()), static_cast<int>(value.length()), 1, 1, YAML_ANY_SCALAR_STYLE);
+		yaml_scalar_event_initialize(&event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(value.c_str())), static_cast<int>(value.length()), 1, 1, YAML_ANY_SCALAR_STYLE);
 		yaml_emitter_emit(&emitter, &event);
 	}
 
@@ -250,7 +250,7 @@ void MapObject::exportYaml(wstring fileName) const {
 	else if (mapObjects.size())
 		yamlSequence(&emitter, &event, mapObjects, flow ? 1 : 0);
 	else {
-		yaml_scalar_event_initialize(&event, NULL, NULL, reinterpret_cast<const yaml_char_t*>(value.c_str()), static_cast<int>(value.length()), 1, 1, YAML_ANY_SCALAR_STYLE);
+		yaml_scalar_event_initialize(&event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(value.c_str())), static_cast<int>(value.length()), 1, 1, YAML_ANY_SCALAR_STYLE);
 		yaml_emitter_emit(&emitter, &event);
 	}
 
@@ -280,7 +280,7 @@ void MapObject::exportYamlWithUserOrder(wstring fileName) const {
 	else if (mapObjects.size())
 		yamlSequenceWithUserOrder(&emitter, &event, mapObjects, flow ? 1 : 0);
 	else {
-		yaml_scalar_event_initialize(&event, NULL, NULL, reinterpret_cast<const yaml_char_t*>(value.c_str()), static_cast<int>(value.length()), 1, 1, YAML_ANY_SCALAR_STYLE);
+		yaml_scalar_event_initialize(&event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(value.c_str())), static_cast<int>(value.length()), 1, 1, YAML_ANY_SCALAR_STYLE);
 		yaml_emitter_emit(&emitter, &event);
 	}
 
@@ -314,7 +314,7 @@ string MapObject::exportYaml() const {
 	else if (mapObjects.size())
 		yamlSequence(&emitter, &event, mapObjects);
 	else {
-		yaml_scalar_event_initialize(&event, NULL, NULL, reinterpret_cast<const yaml_char_t*>(value.c_str()), static_cast<int>(value.length()), 1, 1, YAML_ANY_SCALAR_STYLE);
+		yaml_scalar_event_initialize(&event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(value.c_str())), static_cast<int>(value.length()), 1, 1, YAML_ANY_SCALAR_STYLE);
 		yaml_emitter_emit(&emitter, &event);
 	}
 
@@ -342,7 +342,7 @@ string MapObject::exportYamlWithUserOrder() const {
 	else if (mapObjects.size())
 		yamlSequence(&emitter, &event, mapObjects);
 	else {
-		yaml_scalar_event_initialize(&event, NULL, NULL, reinterpret_cast<const yaml_char_t*>(value.c_str()), static_cast<int>(value.length()), 1, 1, YAML_ANY_SCALAR_STYLE);
+		yaml_scalar_event_initialize(&event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(value.c_str())), static_cast<int>(value.length()), 1, 1, YAML_ANY_SCALAR_STYLE);
 		yaml_emitter_emit(&emitter, &event);
 	}
 
@@ -360,7 +360,7 @@ int MapObject::yamlMap(yaml_emitter_t* emitter, yaml_event_t* event, shared_ptr<
 		yaml_emitter_emit(emitter, event);
 
 		for (const auto& [key, mapObject] : mapObj->map) {
-			yaml_scalar_event_initialize(event, NULL, NULL, reinterpret_cast<const yaml_char_t*>(key.c_str()), static_cast<int>(key.length()), 1, 1, YAML_ANY_SCALAR_STYLE);
+			yaml_scalar_event_initialize(event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(key.c_str())), static_cast<int>(key.length()), 1, 1, YAML_ANY_SCALAR_STYLE);
 			yaml_emitter_emit(emitter, event);
 
 			if (mapObject.mapPtr->map.size())
@@ -368,7 +368,7 @@ int MapObject::yamlMap(yaml_emitter_t* emitter, yaml_event_t* event, shared_ptr<
 			else if (mapObject.mapObjects.size())
 				yamlSequence(emitter, event, mapObject.mapObjects, mapObject.flow ? 1 : 0);
 			else {
-				yaml_scalar_event_initialize(event, NULL, NULL, reinterpret_cast<const yaml_char_t*>(mapObject.value.c_str()), static_cast<int>(mapObject.value.length()), 1, 1, YAML_ANY_SCALAR_STYLE);
+				yaml_scalar_event_initialize(event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(mapObject.value.c_str())), static_cast<int>(mapObject.value.length()), 1, 1, YAML_ANY_SCALAR_STYLE);
 				yaml_emitter_emit(emitter, event);
 			}
 		}
@@ -386,7 +386,7 @@ int MapObject::yamlMapWithUserOrder(yaml_emitter_t* emitter, yaml_event_t* event
 
 		for (const string& key : mapObj->keys) {
 			const MapObject& mapObject = mapObj->map.at(key);
-			yaml_scalar_event_initialize(event, NULL, NULL, reinterpret_cast<const yaml_char_t*>(key.c_str()), static_cast<int>(key.length()), 1, 1, YAML_ANY_SCALAR_STYLE);
+			yaml_scalar_event_initialize(event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(key.c_str())), static_cast<int>(key.length()), 1, 1, YAML_ANY_SCALAR_STYLE);
 			yaml_emitter_emit(emitter, event);
 
 			if (mapObject.mapPtr->map.size())
@@ -394,7 +394,7 @@ int MapObject::yamlMapWithUserOrder(yaml_emitter_t* emitter, yaml_event_t* event
 			else if (mapObject.mapObjects.size())
 				yamlSequenceWithUserOrder(emitter, event, mapObject.mapObjects, mapObject.flow ? 1 : 0);
 			else {
-				yaml_scalar_event_initialize(event, NULL, NULL, reinterpret_cast<const yaml_char_t*>(mapObject.value.c_str()), static_cast<int>(mapObject.value.length()), 1, 1, YAML_ANY_SCALAR_STYLE);
+				yaml_scalar_event_initialize(event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(mapObject.value.c_str())), static_cast<int>(mapObject.value.length()), 1, 1, YAML_ANY_SCALAR_STYLE);
 				yaml_emitter_emit(emitter, event);
 			}
 		}
@@ -416,7 +416,7 @@ int MapObject::yamlSequence(yaml_emitter_t* emitter, yaml_event_t* event, const 
 			else if (mapObject.mapObjects.size())
 				yamlSequence(emitter, event, mapObject.mapObjects, mapObject.flow ? 1 : 0);
 			else if (!mapObject.value.empty()) {
-				yaml_scalar_event_initialize(event, NULL, NULL, reinterpret_cast<const yaml_char_t*>(mapObject.value.c_str()), static_cast<int>(mapObject.value.length()), 1, 1, YAML_ANY_SCALAR_STYLE);
+				yaml_scalar_event_initialize(event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(mapObject.value.c_str())), static_cast<int>(mapObject.value.length()), 1, 1, YAML_ANY_SCALAR_STYLE);
 				yaml_emitter_emit(emitter, event);
 			}
 		}
@@ -439,7 +439,7 @@ int MapObject::yamlSequenceWithUserOrder(yaml_emitter_t* emitter, yaml_event_t* 
 			else if (mapObject.mapObjects.size())
 				yamlSequenceWithUserOrder(emitter, event, mapObject.mapObjects, mapObject.flow ? 1 : 0);
 			else if (!mapObject.value.empty()) {
-				yaml_scalar_event_initialize(event, NULL, NULL, reinterpret_cast<const yaml_char_t*>(mapObject.value.c_str()), static_cast<int>(mapObject.value.length()), 1, 1, YAML_ANY_SCALAR_STYLE);
+				yaml_scalar_event_initialize(event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(mapObject.value.c_str())), static_cast<int>(mapObject.value.length()), 1, 1, YAML_ANY_SCALAR_STYLE);
 				yaml_emitter_emit(emitter, event);
 			}
 		}
