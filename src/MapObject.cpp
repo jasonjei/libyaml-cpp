@@ -164,7 +164,7 @@ void MapObject::hardcoreYamlProcess(MapObject& yamlMap, yaml_parser_t* parser, y
 			}
 			break;
 		default:
-			throw runtime_error("Undefined event type: " + to_string(static_cast<int>(event->type)));
+			break;
 		}
 
 		if (event->type == YAML_DOCUMENT_END_EVENT) done = true;
