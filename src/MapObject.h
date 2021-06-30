@@ -28,12 +28,13 @@ public:
 
 	std::string exportYaml() const;
 	std::string exportYamlWithUserOrder() const;
+	std::string exportYamlWithUserOrderAndVersion(const std::string& version = "1.2") const;
 
 	void exportYaml(const std::string& fileName) const;
 	void exportYamlWithUserOrder(const std::string& fileName) const;
 #ifdef WIN32
-	void exportYaml(std::wstring fileName) const;
-	void exportYamlWithUserOrder(std::wstring fileName) const;
+	void exportYaml(const std::wstring& fileName) const;
+	void exportYamlWithUserOrder(const std::wstring& fileName) const;
 #endif
 
 	enum mapObjectType { MAP_OBJ_UNINIT, MAP_OBJ_VECTOR, MAP_OBJ_MAP, MAP_OBJ_VALUE, MAP_OBJ_FAILED };

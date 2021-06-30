@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <stack>
+#include <sstream>
 
 using namespace std;
 
@@ -232,7 +233,7 @@ void MapObject::exportYamlWithUserOrder(const string& fileName) const {
 }
 
 #ifdef WIN32
-void MapObject::exportYaml(wstring fileName) const {
+void MapObject::exportYaml(const wstring& fileName) const {
 	yaml_emitter_t emitter;
 	yaml_emitter_initialize(&emitter);
 
@@ -262,7 +263,7 @@ void MapObject::exportYaml(wstring fileName) const {
 	yaml_emitter_delete(&emitter);
 }
 
-void MapObject::exportYamlWithUserOrder(wstring fileName) const {
+void MapObject::exportYamlWithUserOrder(const wstring& fileName) const {
 	yaml_emitter_t emitter;
 	yaml_emitter_initialize(&emitter);
 
@@ -352,6 +353,19 @@ string MapObject::exportYamlWithUserOrder() const {
 	yaml_emitter_delete(&emitter);
 
 	return exportValue;
+}
+
+string MapObject::exportYamlWithUserOrderAndVersion(const std::string& version) const {
+	string exportedStr = exportYamlWithUserOrder();
+	if (exportedStr.back() == '\n')
+		exportedStr.pop_back();
+
+	if (exportedStr.back() == '\r')
+		exportedStr.pop_back();
+
+	stringstream ss;
+	ss << "% YAML " << version << endl << "---" << endl << exportedStr << endl << "..." << endl;
+	return ss.str();
 }
 
 int MapObject::yamlMap(yaml_emitter_t* emitter, yaml_event_t* event, shared_ptr<MapObject::mapMapObject> mapObj) {
