@@ -26,6 +26,8 @@ public:
 	static MapObject processYaml(FILE* fh);
 	static MapObject processYaml(const std::string& str);
 
+	void SetLineWithInfiniteWidth(bool lineWithInfiniteWidth) { _lineWithInfiniteWidth = lineWithInfiniteWidth; }
+
 	std::string exportYaml() const;
 	std::string exportYamlWithUserOrder() const;
 	std::string exportYamlWithUserOrderAndVersion(const std::string& version = "1.2") const;
@@ -56,7 +58,9 @@ private:
 	static int yamlMap(yaml_emitter_t* emitter, yaml_event_t* event, std::shared_ptr<MapObject::mapMapObject> mapObj);
 	static int yamlMapWithUserOrder(yaml_emitter_t* emitter, yaml_event_t* event, std::shared_ptr<MapObject::mapMapObject> mapObj);
 
-	static constexpr bool debug =
+	bool _lineWithInfiniteWidth = true;
+
+	static constexpr bool _debug =
 #ifdef DEBUG
 		true
 #else

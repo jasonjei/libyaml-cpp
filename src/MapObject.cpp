@@ -12,14 +12,14 @@ MapObject MapObject::processYaml(FILE* fh) {
 	MapObject yamlMap;
 	if (fh == NULL) {
 		yamlMap._type = MapObject::MAP_OBJ_FAILED;
-		if constexpr (debug) fputs("Failed to open file!\n", stderr);
+		if constexpr (_debug) fputs("Failed to open file!\n", stderr);
 		return yamlMap;
 	}
 
 	yaml_parser_t parser;
 	if (!yaml_parser_initialize(&parser)) {
 		yamlMap._type = MapObject::MAP_OBJ_FAILED;
-		if constexpr (debug) fputs("Failed to initialize parser!\n", stderr);
+		if constexpr (_debug) fputs("Failed to initialize parser!\n", stderr);
 		return yamlMap;
 	}
 
@@ -42,7 +42,7 @@ MapObject MapObject::processYaml(const string& str) {
 	yaml_parser_t parser;
 	if (!yaml_parser_initialize(&parser)) {
 		yamlMap._type = MapObject::MAP_OBJ_FAILED;
-		if constexpr (debug) fputs("Failed to initialize parser!\n", stderr);
+		if constexpr (_debug) fputs("Failed to initialize parser!\n", stderr);
 		return yamlMap;
 	}
 
@@ -67,23 +67,23 @@ void MapObject::hardcoreYamlProcess(MapObject& yamlMap, yaml_parser_t* parser, y
 
 		switch (event->type) {
 		case YAML_NO_EVENT:
-			if constexpr (debug) puts("No event!");
+			if constexpr (_debug) puts("No event!");
 			done = true;
 			break;
 			/* Stream start/end */
 		case YAML_STREAM_START_EVENT:
-			if constexpr (debug) puts("STREAM START");
+			if constexpr (_debug) puts("STREAM START");
 			break;
 		case YAML_STREAM_END_EVENT:
-			if constexpr (debug) puts("STREAM END");
+			if constexpr (_debug) puts("STREAM END");
 			break;
 			/* Block delimeters */
 		case YAML_DOCUMENT_START_EVENT:
-			if constexpr (debug) puts("<b>Start Document</b>");
+			if constexpr (_debug) puts("<b>Start Document</b>");
 			stack.push(&yamlMap);
 			break;
 		case YAML_DOCUMENT_END_EVENT:
-			if constexpr (debug) puts("<b>End Document</b>");
+			if constexpr (_debug) puts("<b>End Document</b>");
 			if (stack.top()->mapPtr->nextIsKey) {
 				stack.top()->value = stack.top()->mapPtr->keys.front();
 				stack.top()->mapPtr->keys.pop_back();
@@ -92,7 +92,7 @@ void MapObject::hardcoreYamlProcess(MapObject& yamlMap, yaml_parser_t* parser, y
 			stack.pop();
 			break;
 		case YAML_SEQUENCE_START_EVENT:
-			if constexpr (debug) puts("<b>Start Sequence</b>");
+			if constexpr (_debug) puts("<b>Start Sequence</b>");
 			if (stack.top()->mapPtr->keys.size() && stack.top()->mapPtr->nextIsKey) {
 				lastKey = stack.top()->mapPtr->keys.back();
 				stack.top()->mapPtr->map[lastKey] = MapObject();
@@ -111,11 +111,11 @@ void MapObject::hardcoreYamlProcess(MapObject& yamlMap, yaml_parser_t* parser, y
 			stack.top()->_type = MAP_OBJ_VECTOR;
 			break;
 		case YAML_SEQUENCE_END_EVENT:
-			if constexpr (debug) puts("<b>End Sequence</b>");
+			if constexpr (_debug) puts("<b>End Sequence</b>");
 			stack.pop();
 			break;
 		case YAML_MAPPING_START_EVENT:
-			if constexpr (debug) puts("<b>Start Mapping</b>");
+			if constexpr (_debug) puts("<b>Start Mapping</b>");
 			if (stack.top()->mapPtr->keys.size() && stack.top()->mapPtr->nextIsKey)
 				stack.push(&stack.top()->mapPtr->map[stack.top()->mapPtr->keys.back()]);
 			else if (stack.top()->_type == MAP_OBJ_VECTOR) {
@@ -131,7 +131,7 @@ void MapObject::hardcoreYamlProcess(MapObject& yamlMap, yaml_parser_t* parser, y
 			stack.top()->_type = MAP_OBJ_MAP;
 			break;
 		case YAML_MAPPING_END_EVENT:
-			if constexpr (debug) puts("<b>End Mapping</b>");
+			if constexpr (_debug) puts("<b>End Mapping</b>");
 			if (stack.top()->mapPtr->keys.size()) {
 				stack.top()->mapPtr->keys.erase(unique(stack.top()->mapPtr->keys.begin(), stack.top()->mapPtr->keys.end()), stack.top()->mapPtr->keys.end());
 			}
@@ -142,10 +142,10 @@ void MapObject::hardcoreYamlProcess(MapObject& yamlMap, yaml_parser_t* parser, y
 			break;
 			/* Data */
 		case YAML_ALIAS_EVENT:
-			if constexpr (debug) printf("Got alias (anchor %s)\n", event->data.alias.anchor);
+			if constexpr (_debug) printf("Got alias (anchor %s)\n", event->data.alias.anchor);
 			break;
 		case YAML_SCALAR_EVENT:
-			if constexpr (debug) printf("Got scalar (value %s)\n", event->data.scalar.value);
+			if constexpr (_debug) printf("Got scalar (value %s)\n", event->data.scalar.value);
 			if (stack.top()->_type == MAP_OBJ_MAP && !stack.top()->mapPtr->nextIsKey) {
 				stack.top()->mapPtr->keys.push_back(reinterpret_cast<char*>(event->data.scalar.value));
 				stack.top()->mapPtr->nextIsKey = true;
@@ -180,6 +180,9 @@ void MapObject::exportYaml(const string& fileName) const {
 	yaml_emitter_t emitter;
 	yaml_emitter_initialize(&emitter);
 
+	if (_lineWithInfiniteWidth)
+		yaml_emitter_set_width(&emitter, -1);
+
 	FILE* const file = fopen(fileName.c_str(), "wb");
 	yaml_emitter_set_output_file(&emitter, file);
 	yaml_emitter_set_encoding(&emitter, YAML_UTF8_ENCODING);
@@ -207,6 +210,9 @@ void MapObject::exportYaml(const string& fileName) const {
 void MapObject::exportYamlWithUserOrder(const string& fileName) const {
 	yaml_emitter_t emitter;
 	yaml_emitter_initialize(&emitter);
+
+	if (_lineWithInfiniteWidth)
+		yaml_emitter_set_width(&emitter, -1);
 
 	FILE* const file = fopen(fileName.c_str(), "wb");
 	yaml_emitter_set_output_file(&emitter, file);
@@ -237,6 +243,9 @@ void MapObject::exportYaml(const wstring& fileName) const {
 	yaml_emitter_t emitter;
 	yaml_emitter_initialize(&emitter);
 
+	if (_lineWithInfiniteWidth)
+		yaml_emitter_set_width(&emitter, -1);
+
 	FILE* const file;
 	_wfopen_s(&file, fileName.c_str(), _T("wb"));
 
@@ -266,6 +275,9 @@ void MapObject::exportYaml(const wstring& fileName) const {
 void MapObject::exportYamlWithUserOrder(const wstring& fileName) const {
 	yaml_emitter_t emitter;
 	yaml_emitter_initialize(&emitter);
+
+	if (_lineWithInfiniteWidth)
+		yaml_emitter_set_width(&emitter, -1);
 
 	FILE* const file;
 	_wfopen_s(&file, fileName.c_str(), _T("wb"));
@@ -303,6 +315,9 @@ string MapObject::exportYaml() const {
 	yaml_emitter_t emitter;
 	yaml_emitter_initialize(&emitter);
 
+	if (_lineWithInfiniteWidth)
+		yaml_emitter_set_width(&emitter, -1);
+
 	string exportValue = "";
 	yaml_emitter_set_output(&emitter, write_handler, &exportValue);
 	yaml_emitter_set_encoding(&emitter, YAML_UTF8_ENCODING);
@@ -330,6 +345,9 @@ string MapObject::exportYaml() const {
 string MapObject::exportYamlWithUserOrder() const {
 	yaml_emitter_t emitter;
 	yaml_emitter_initialize(&emitter);
+
+	if (_lineWithInfiniteWidth)
+		yaml_emitter_set_width(&emitter, -1);
 
 	string exportValue = "";
 	yaml_emitter_set_output(&emitter, write_handler, &exportValue);
