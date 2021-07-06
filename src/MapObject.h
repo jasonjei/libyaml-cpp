@@ -75,6 +75,7 @@ public:
 	std::vector<std::string> keys;
 	bool nextIsKey;
 	bool flow;
+	yaml_scalar_style_t yamlScalarStyle = YAML_ANY_SCALAR_STYLE;
 	mapMapObject() noexcept : nextIsKey(false), flow(false) {}
 };
 
