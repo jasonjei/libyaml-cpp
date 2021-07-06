@@ -17,6 +17,7 @@
 #include <string>
 #include <unordered_map>
 #include <vector>
+#include <optional>
 
 #include "yaml.h"
 
@@ -29,14 +30,22 @@ public:
 	void SetLineWithInfiniteWidth(bool lineWithInfiniteWidth) { _lineWithInfiniteWidth = lineWithInfiniteWidth; }
 
 	std::string exportYaml() const;
+	std::string exportYamlWithVersion(const yaml_version_directive_t& version = defaultYamlVersionDirective) const;
+
 	std::string exportYamlWithUserOrder() const;
-	std::string exportYamlWithUserOrderAndVersion(const std::string& version = "1.2") const;
+	std::string exportYamlWithUserOrderAndVersion(const yaml_version_directive_t& version = defaultYamlVersionDirective) const;
 
 	void exportYaml(const std::string& fileName) const;
+	void exportYamlWithVersion(const std::string& fileName, const yaml_version_directive_t& version = defaultYamlVersionDirective) const;
+
 	void exportYamlWithUserOrder(const std::string& fileName) const;
+	void exportYamlWithUserOrderAndVersion(const std::string& fileName, const yaml_version_directive_t& version = defaultYamlVersionDirective) const;
 #ifdef WIN32
 	void exportYaml(const std::wstring& fileName) const;
+	void exportYamlWithVersion(const std::wstring& fileName, const yaml_version_directive_t& version = defaultYamlVersionDirective) const;
+
 	void exportYamlWithUserOrder(const std::wstring& fileName) const;
+	void exportYamlWithUserOrderWithVersion(const std::wstring& fileName, const yaml_version_directive_t& version = defaultYamlVersionDirective) const;
 #endif
 
 	enum mapObjectType { MAP_OBJ_UNINIT, MAP_OBJ_VECTOR, MAP_OBJ_MAP, MAP_OBJ_VALUE, MAP_OBJ_FAILED };
@@ -52,7 +61,7 @@ public:
 private:
 	static void hardcoreYamlProcess(MapObject& yamlMap, yaml_parser_t* parser, yaml_event_t* event);
 	static int write_handler(void* ctx, unsigned char* buffer, size_t size);
-	static int yamlDocProlog(yaml_emitter_t* emitter, yaml_event_t* event);
+	static int yamlDocProlog(yaml_emitter_t* emitter, yaml_event_t* event, const std::optional<yaml_version_directive_t>& version = std::nullopt);
 	static int yamlDocEpilog(yaml_emitter_t* emitter, yaml_event_t* event);
 	static int yamlSequence(yaml_emitter_t* emitter, yaml_event_t* event, const std::vector<MapObject>& mapObjects, int flow_style = 0);
 	static int yamlSequenceWithUserOrder(yaml_emitter_t* emitter, yaml_event_t* event, const std::vector<MapObject>& mapObjects, int flow_style = 0);
@@ -61,6 +70,7 @@ private:
 
 	bool _lineWithInfiniteWidth = true;
 
+	static constexpr yaml_version_directive_t defaultYamlVersionDirective = { 1, 1 };
 	static constexpr bool _debug =
 #ifdef DEBUG
 		true
