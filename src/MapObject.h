@@ -47,6 +47,7 @@ public:
 	std::shared_ptr<MapObject::mapMapObject> mapPtr;
 	MapObject::mapObjectType _type;
 	bool flow;
+	yaml_scalar_style_t yamlScalarStyle = YAML_ANY_SCALAR_STYLE;
 
 private:
 	static void hardcoreYamlProcess(MapObject& yamlMap, yaml_parser_t* parser, yaml_event_t* event);
@@ -75,7 +76,6 @@ public:
 	std::vector<std::string> keys;
 	bool nextIsKey;
 	bool flow;
-	yaml_scalar_style_t yamlScalarStyle = YAML_ANY_SCALAR_STYLE;
 	mapMapObject() noexcept : nextIsKey(false), flow(false) {}
 };
 
