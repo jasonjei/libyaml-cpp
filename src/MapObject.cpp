@@ -392,7 +392,7 @@ int MapObject::yamlMap(yaml_emitter_t* emitter, yaml_event_t* event, shared_ptr<
 		yaml_emitter_emit(emitter, event);
 
 		for (const auto& [key, mapObject] : mapObj->map) {
-			yaml_scalar_event_initialize(event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(key.c_str())), static_cast<int>(key.length()), 1, 1, mapObject.yamlScalarStyle);
+			yaml_scalar_event_initialize(event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(key.c_str())), static_cast<int>(key.length()), 1, 1, YAML_ANY_SCALAR_STYLE);
 			yaml_emitter_emit(emitter, event);
 
 			if (mapObject.mapPtr->map.size())
@@ -418,7 +418,7 @@ int MapObject::yamlMapWithUserOrder(yaml_emitter_t* emitter, yaml_event_t* event
 
 		for (const string& key : mapObj->keys) {
 			const MapObject& mapObject = mapObj->map.at(key);
-			yaml_scalar_event_initialize(event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(key.c_str())), static_cast<int>(key.length()), 1, 1, mapObject.yamlScalarStyle);
+			yaml_scalar_event_initialize(event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(key.c_str())), static_cast<int>(key.length()), 1, 1, YAML_ANY_SCALAR_STYLE);
 			yaml_emitter_emit(emitter, event);
 
 			if (mapObject.mapPtr->map.size())
