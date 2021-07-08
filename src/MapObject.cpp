@@ -6,7 +6,7 @@
 
 using namespace std;
 
-MapObject::MapObject() : mapPtr(make_shared<mapMapObject>()), flow(false) {}
+MapObject::MapObject() : mapPtr(make_shared<mapMapObject>()), _type(MAP_OBJ_UNINIT), flow(false) {}
 
 MapObject MapObject::processYaml(FILE* fh) {
 	MapObject yamlMap;
@@ -176,261 +176,80 @@ void MapObject::hardcoreYamlProcess(MapObject& yamlMap, yaml_parser_t* parser, y
 	yaml_parser_delete(parser);
 }
 
-void MapObject::exportYaml(const string& fileName) const {
-	yaml_emitter_t emitter;
-	yaml_emitter_initialize(&emitter);
-
+void MapObject::exportYamlCore(yaml_emitter_t& emitter, bool withUserOrder, const std::optional<yaml_version_directive_t>& version) const {
 	if (_lineWithInfiniteWidth)
 		yaml_emitter_set_width(&emitter, -1);
 
-	FILE* const file = fopen(fileName.c_str(), "wb");
-	yaml_emitter_set_output_file(&emitter, file);
-	yaml_emitter_set_encoding(&emitter, YAML_UTF8_ENCODING);
-
 	yaml_event_t event;
-	if (!yamlDocProlog(&emitter, &event)) return;
+	if (!yamlDocProlog(&emitter, &event, version)) return;
 
-	if (mapPtr->map.size())
-		yamlMap(&emitter, &event, mapPtr);
-	else if (mapObjects.size())
-		yamlSequence(&emitter, &event, mapObjects, flow ? 1 : 0);
-	else {
-		yaml_scalar_event_initialize(&event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(value.c_str())), static_cast<int>(value.length()), 1, 1, yamlScalarStyle);
-		yaml_emitter_emit(&emitter, &event);
-	}
+	yamlObject(&emitter, &event, *this, withUserOrder);
 
-	yamlDocEpilog(&emitter, &event);
+	// if we force an explicit document start by specifying the version then we want an explicit end as well
+	const bool explicitEnd = version.has_value();
+	yamlDocEpilog(&emitter, &event, explicitEnd);
 	yaml_emitter_flush(&emitter);
-	fclose(file);
 
 	yaml_event_delete(&event);
 	yaml_emitter_delete(&emitter);
+}
+
+void MapObject::exportYamlFile(FILE* file, bool withUserOrder, const std::optional<yaml_version_directive_t>& version) const {
+	yaml_emitter_t emitter;
+	yaml_emitter_initialize(&emitter);
+
+	yaml_emitter_set_output_file(&emitter, file);
+	yaml_emitter_set_encoding(&emitter, YAML_UTF8_ENCODING);
+
+	exportYamlCore(emitter, withUserOrder, version);
+
+	fclose(file);
+}
+
+std::string MapObject::exportYamlString(bool withUserOrder, const std::optional<yaml_version_directive_t>& version) const {
+	yaml_emitter_t emitter;
+	yaml_emitter_initialize(&emitter);
+
+	string exportValue = "";
+	yaml_emitter_set_output(&emitter, write_handler, &exportValue);
+	yaml_emitter_set_encoding(&emitter, YAML_UTF8_ENCODING);
+
+	exportYamlCore(emitter, withUserOrder, version);
+
+	return exportValue;
+}
+
+void MapObject::exportYaml(const string& fileName) const {
+	return exportYamlFile(openFile(fileName), false);
 }
 
 void MapObject::exportYamlWithVersion(const string& fileName, const yaml_version_directive_t& version) const {
-	yaml_emitter_t emitter;
-	yaml_emitter_initialize(&emitter);
-
-	if (_lineWithInfiniteWidth)
-		yaml_emitter_set_width(&emitter, -1);
-
-	FILE* const file = fopen(fileName.c_str(), "wb");
-	yaml_emitter_set_output_file(&emitter, file);
-	yaml_emitter_set_encoding(&emitter, YAML_UTF8_ENCODING);
-
-	yaml_event_t event;
-	if (!yamlDocProlog(&emitter, &event, version)) return;
-
-	if (mapPtr->map.size())
-		yamlMap(&emitter, &event, mapPtr);
-	else if (mapObjects.size())
-		yamlSequence(&emitter, &event, mapObjects, flow ? 1 : 0);
-	else {
-		yaml_scalar_event_initialize(&event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(value.c_str())), static_cast<int>(value.length()), 1, 1, yamlScalarStyle);
-		yaml_emitter_emit(&emitter, &event);
-	}
-
-	yamlDocEpilog(&emitter, &event);
-	yaml_emitter_flush(&emitter);
-	fclose(file);
-
-	yaml_event_delete(&event);
-	yaml_emitter_delete(&emitter);
+	return exportYamlFile(openFile(fileName), false, version);
 }
 
 void MapObject::exportYamlWithUserOrder(const string& fileName) const {
-	yaml_emitter_t emitter;
-	yaml_emitter_initialize(&emitter);
-
-	if (_lineWithInfiniteWidth)
-		yaml_emitter_set_width(&emitter, -1);
-
-	FILE* const file = fopen(fileName.c_str(), "wb");
-	yaml_emitter_set_output_file(&emitter, file);
-	yaml_emitter_set_encoding(&emitter, YAML_UTF8_ENCODING);
-
-	yaml_event_t event;
-	if (!yamlDocProlog(&emitter, &event)) return;
-
-	if (mapPtr->map.size())
-		yamlMapWithUserOrder(&emitter, &event, mapPtr);
-	else if (mapObjects.size())
-		yamlSequenceWithUserOrder(&emitter, &event, mapObjects, flow ? 1 : 0);
-	else {
-		yaml_scalar_event_initialize(&event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(value.c_str())), static_cast<int>(value.length()), 1, 1, yamlScalarStyle);
-		yaml_emitter_emit(&emitter, &event);
-	}
-
-	yamlDocEpilog(&emitter, &event);
-	yaml_emitter_flush(&emitter);
-	fclose(file);
-
-	yaml_event_delete(&event);
-	yaml_emitter_delete(&emitter);
+	return exportYamlFile(openFile(fileName), true);
 }
 
 void MapObject::exportYamlWithUserOrderAndVersion(const string& fileName, const yaml_version_directive_t& version) const {
-	yaml_emitter_t emitter;
-	yaml_emitter_initialize(&emitter);
-
-	if (_lineWithInfiniteWidth)
-		yaml_emitter_set_width(&emitter, -1);
-
-	FILE* const file = fopen(fileName.c_str(), "wb");
-	yaml_emitter_set_output_file(&emitter, file);
-	yaml_emitter_set_encoding(&emitter, YAML_UTF8_ENCODING);
-
-	yaml_event_t event;
-	if (!yamlDocProlog(&emitter, &event, version)) return;
-
-	if (mapPtr->map.size())
-		yamlMapWithUserOrder(&emitter, &event, mapPtr);
-	else if (mapObjects.size())
-		yamlSequenceWithUserOrder(&emitter, &event, mapObjects, flow ? 1 : 0);
-	else {
-		yaml_scalar_event_initialize(&event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(value.c_str())), static_cast<int>(value.length()), 1, 1, yamlScalarStyle);
-		yaml_emitter_emit(&emitter, &event);
-	}
-
-	yamlDocEpilog(&emitter, &event);
-	yaml_emitter_flush(&emitter);
-	fclose(file);
-
-	yaml_event_delete(&event);
-	yaml_emitter_delete(&emitter);
+	return exportYamlFile(openFile(fileName), true, version);
 }
 
 #ifdef WIN32
 void MapObject::exportYaml(const wstring& fileName) const {
-	yaml_emitter_t emitter;
-	yaml_emitter_initialize(&emitter);
-
-	if (_lineWithInfiniteWidth)
-		yaml_emitter_set_width(&emitter, -1);
-
-	FILE* const file;
-	_wfopen_s(&file, fileName.c_str(), _T("wb"));
-
-	yaml_emitter_set_output_file(&emitter, file);
-	yaml_emitter_set_encoding(&emitter, YAML_UTF8_ENCODING);
-
-	yaml_event_t event;
-	if (!yamlDocProlog(&emitter, &event)) return;
-
-	if (mapPtr->map.size())
-		yamlMap(&emitter, &event, mapPtr);
-	else if (mapObjects.size())
-		yamlSequence(&emitter, &event, mapObjects, flow ? 1 : 0);
-	else {
-		yaml_scalar_event_initialize(&event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(value.c_str())), static_cast<int>(value.length()), 1, 1, yamlScalarStyle);
-		yaml_emitter_emit(&emitter, &event);
-	}
-
-	yamlDocEpilog(&emitter, &event);
-	yaml_emitter_flush(&emitter);
-	fclose(file);
-
-	yaml_event_delete(&event);
-	yaml_emitter_delete(&emitter);
+	return exportYamlFile(openFile(fileName), false);
 }
 
-void MapObject::exportYamlWithVersion(const wstring& fileName) const {
-	yaml_emitter_t emitter;
-	yaml_emitter_initialize(&emitter);
-
-	if (_lineWithInfiniteWidth)
-		yaml_emitter_set_width(&emitter, -1);
-
-	FILE* const file;
-	_wfopen_s(&file, fileName.c_str(), _T("wb"));
-
-	yaml_emitter_set_output_file(&emitter, file);
-	yaml_emitter_set_encoding(&emitter, YAML_UTF8_ENCODING);
-
-	yaml_event_t event;
-	if (!yamlDocProlog(&emitter, &event, version)) return;
-
-	if (mapPtr->map.size())
-		yamlMap(&emitter, &event, mapPtr);
-	else if (mapObjects.size())
-		yamlSequence(&emitter, &event, mapObjects, flow ? 1 : 0);
-	else {
-		yaml_scalar_event_initialize(&event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(value.c_str())), static_cast<int>(value.length()), 1, 1, yamlScalarStyle);
-		yaml_emitter_emit(&emitter, &event);
-	}
-
-	yamlDocEpilog(&emitter, &event);
-	yaml_emitter_flush(&emitter);
-	fclose(file);
-
-	yaml_event_delete(&event);
-	yaml_emitter_delete(&emitter);
+void MapObject::exportYamlWithVersion(const wstring& fileName, const yaml_version_directive_t& version) const {
+	return exportYamlFile(openFile(fileName), false, version);
 }
 
 void MapObject::exportYamlWithUserOrder(const wstring& fileName) const {
-	yaml_emitter_t emitter;
-	yaml_emitter_initialize(&emitter);
-
-	if (_lineWithInfiniteWidth)
-		yaml_emitter_set_width(&emitter, -1);
-
-	FILE* const file;
-	_wfopen_s(&file, fileName.c_str(), _T("wb"));
-
-	yaml_emitter_set_output_file(&emitter, file);
-	yaml_emitter_set_encoding(&emitter, YAML_UTF8_ENCODING);
-
-	yaml_event_t event;
-	if (!yamlDocProlog(&emitter, &event)) return;
-
-	if (mapPtr->map.size())
-		yamlMapWithUserOrder(&emitter, &event, mapPtr);
-	else if (mapObjects.size())
-		yamlSequenceWithUserOrder(&emitter, &event, mapObjects, flow ? 1 : 0);
-	else {
-		yaml_scalar_event_initialize(&event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(value.c_str())), static_cast<int>(value.length()), 1, 1, yamlScalarStyle);
-		yaml_emitter_emit(&emitter, &event);
-	}
-
-	yamlDocEpilog(&emitter, &event);
-	yaml_emitter_flush(&emitter);
-	fclose(file);
-
-	yaml_event_delete(&event);
-	yaml_emitter_delete(&emitter);
+	return exportYamlFile(openFile(fileName), true);
 }
 
-void MapObject::exportYamlWithUserOrderAndVersion(const wstring& fileName) const {
-	yaml_emitter_t emitter;
-	yaml_emitter_initialize(&emitter);
-
-	if (_lineWithInfiniteWidth)
-		yaml_emitter_set_width(&emitter, -1);
-
-	FILE* const file;
-	_wfopen_s(&file, fileName.c_str(), _T("wb"));
-
-	yaml_emitter_set_output_file(&emitter, file);
-	yaml_emitter_set_encoding(&emitter, YAML_UTF8_ENCODING);
-
-	yaml_event_t event;
-	if (!yamlDocProlog(&emitter, &event, version)) return;
-
-	if (mapPtr->map.size())
-		yamlMapWithUserOrder(&emitter, &event, mapPtr);
-	else if (mapObjects.size())
-		yamlSequenceWithUserOrder(&emitter, &event, mapObjects, flow ? 1 : 0);
-	else {
-		yaml_scalar_event_initialize(&event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(value.c_str())), static_cast<int>(value.length()), 1, 1, yamlScalarStyle);
-		yaml_emitter_emit(&emitter, &event);
-	}
-
-	yamlDocEpilog(&emitter, &event);
-	yaml_emitter_flush(&emitter);
-	fclose(file);
-
-	yaml_event_delete(&event);
-	yaml_emitter_delete(&emitter);
+void MapObject::exportYamlWithUserOrderAndVersion(const wstring& fileName, const yaml_version_directive_t& version) const {
+	return exportYamlFile(openFile(fileName), true, version);
 }
 #endif
 
@@ -440,127 +259,33 @@ int MapObject::write_handler(void* ctx, unsigned char* buffer, size_t size) {
 }
 
 string MapObject::exportYaml() const {
-	yaml_emitter_t emitter;
-	yaml_emitter_initialize(&emitter);
-
-	if (_lineWithInfiniteWidth)
-		yaml_emitter_set_width(&emitter, -1);
-
-	string exportValue = "";
-	yaml_emitter_set_output(&emitter, write_handler, &exportValue);
-	yaml_emitter_set_encoding(&emitter, YAML_UTF8_ENCODING);
-
-	yaml_event_t event;
-	if (!yamlDocProlog(&emitter, &event)) return "";
-
-	if (mapPtr->map.size())
-		yamlMap(&emitter, &event, mapPtr);
-	else if (mapObjects.size())
-		yamlSequence(&emitter, &event, mapObjects);
-	else {
-		yaml_scalar_event_initialize(&event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(value.c_str())), static_cast<int>(value.length()), 1, 1, yamlScalarStyle);
-		yaml_emitter_emit(&emitter, &event);
-	}
-
-	yamlDocEpilog(&emitter, &event);
-
-	yaml_event_delete(&event);
-	yaml_emitter_delete(&emitter);
-
-	return exportValue;
+	return exportYamlString(false);
 }
 
 string MapObject::exportYamlWithVersion(const yaml_version_directive_t& version) const {
-	yaml_emitter_t emitter;
-	yaml_emitter_initialize(&emitter);
-
-	if (_lineWithInfiniteWidth)
-		yaml_emitter_set_width(&emitter, -1);
-
-	string exportValue = "";
-	yaml_emitter_set_output(&emitter, write_handler, &exportValue);
-	yaml_emitter_set_encoding(&emitter, YAML_UTF8_ENCODING);
-
-	yaml_event_t event;
-	if (!yamlDocProlog(&emitter, &event, version)) return "";
-
-	if (mapPtr->map.size())
-		yamlMap(&emitter, &event, mapPtr);
-	else if (mapObjects.size())
-		yamlSequence(&emitter, &event, mapObjects);
-	else {
-		yaml_scalar_event_initialize(&event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(value.c_str())), static_cast<int>(value.length()), 1, 1, yamlScalarStyle);
-		yaml_emitter_emit(&emitter, &event);
-	}
-
-	yamlDocEpilog(&emitter, &event);
-
-	yaml_event_delete(&event);
-	yaml_emitter_delete(&emitter);
-
-	return exportValue;
+	return exportYamlString(false, version);
 }
 
 string MapObject::exportYamlWithUserOrder() const {
-	yaml_emitter_t emitter;
-	yaml_emitter_initialize(&emitter);
-
-	if (_lineWithInfiniteWidth)
-		yaml_emitter_set_width(&emitter, -1);
-
-	string exportValue = "";
-	yaml_emitter_set_output(&emitter, write_handler, &exportValue);
-	yaml_emitter_set_encoding(&emitter, YAML_UTF8_ENCODING);
-
-	yaml_event_t event;
-	if (!yamlDocProlog(&emitter, &event)) return "";
-
-	if (mapPtr->map.size())
-		yamlMapWithUserOrder(&emitter, &event, mapPtr);
-	else if (mapObjects.size())
-		yamlSequenceWithUserOrder(&emitter, &event, mapObjects);
-	else {
-		yaml_scalar_event_initialize(&event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(value.c_str())), static_cast<int>(value.length()), 1, 1, yamlScalarStyle);
-		yaml_emitter_emit(&emitter, &event);
-	}
-
-	yamlDocEpilog(&emitter, &event);
-
-	yaml_event_delete(&event);
-	yaml_emitter_delete(&emitter);
-
-	return exportValue;
+	return exportYamlString(true);
 }
 
 string MapObject::exportYamlWithUserOrderAndVersion(const yaml_version_directive_t& version) const {
-	yaml_emitter_t emitter;
-	yaml_emitter_initialize(&emitter);
+	return exportYamlString(true, version);
+}
 
-	if (_lineWithInfiniteWidth)
-		yaml_emitter_set_width(&emitter, -1);
-
-	string exportValue = "";
-	yaml_emitter_set_output(&emitter, write_handler, &exportValue);
-	yaml_emitter_set_encoding(&emitter, YAML_UTF8_ENCODING);
-
-	yaml_event_t event;
-	if (!yamlDocProlog(&emitter, &event, version)) return "";
-
-	if (mapPtr->map.size())
-		yamlMapWithUserOrder(&emitter, &event, mapPtr);
-	else if (mapObjects.size())
-		yamlSequenceWithUserOrder(&emitter, &event, mapObjects);
-	else {
-		yaml_scalar_event_initialize(&event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(value.c_str())), static_cast<int>(value.length()), 1, 1, yamlScalarStyle);
-		yaml_emitter_emit(&emitter, &event);
+void MapObject::yamlObject(yaml_emitter_t* emitter, yaml_event_t* event, const MapObject& mapObject, bool withUserOrder, bool allowEmptyScalars) {
+	if (mapObject.mapPtr->map.size())
+		if (withUserOrder)
+			yamlMapWithUserOrder(emitter, event, mapObject.mapPtr);
+		else
+			yamlMap(emitter, event, mapObject.mapPtr);
+	else if (mapObject.mapObjects.size())
+		yamlSequence(emitter, event, mapObject.mapObjects, withUserOrder, mapObject.flow ? 1 : 0);
+	else if (allowEmptyScalars || !mapObject.value.empty()) {
+		yaml_scalar_event_initialize(event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(mapObject.value.c_str())), static_cast<int>(mapObject.value.length()), 1, 1, mapObject.yamlScalarStyle);
+		yaml_emitter_emit(emitter, event);
 	}
-
-	yamlDocEpilog(&emitter, &event);
-
-	yaml_event_delete(&event);
-	yaml_emitter_delete(&emitter);
-
-	return exportValue;
 }
 
 int MapObject::yamlMap(yaml_emitter_t* emitter, yaml_event_t* event, shared_ptr<MapObject::mapMapObject> mapObj) {
@@ -572,14 +297,7 @@ int MapObject::yamlMap(yaml_emitter_t* emitter, yaml_event_t* event, shared_ptr<
 			yaml_scalar_event_initialize(event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(key.c_str())), static_cast<int>(key.length()), 1, 1, YAML_ANY_SCALAR_STYLE);
 			yaml_emitter_emit(emitter, event);
 
-			if (mapObject.mapPtr->map.size())
-				yamlMap(emitter, event, mapObject.mapPtr);
-			else if (mapObject.mapObjects.size())
-				yamlSequence(emitter, event, mapObject.mapObjects, mapObject.flow ? 1 : 0);
-			else {
-				yaml_scalar_event_initialize(event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(mapObject.value.c_str())), static_cast<int>(mapObject.value.length()), 1, 1, mapObject.yamlScalarStyle);
-				yaml_emitter_emit(emitter, event);
-			}
+			yamlObject(emitter, event, mapObject, false);
 		}
 
 		yaml_mapping_end_event_initialize(event);
@@ -598,14 +316,7 @@ int MapObject::yamlMapWithUserOrder(yaml_emitter_t* emitter, yaml_event_t* event
 			yaml_scalar_event_initialize(event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(key.c_str())), static_cast<int>(key.length()), 1, 1, YAML_ANY_SCALAR_STYLE);
 			yaml_emitter_emit(emitter, event);
 
-			if (mapObject.mapPtr->map.size())
-				yamlMapWithUserOrder(emitter, event, mapObject.mapPtr);
-			else if (mapObject.mapObjects.size())
-				yamlSequenceWithUserOrder(emitter, event, mapObject.mapObjects, mapObject.flow ? 1 : 0);
-			else {
-				yaml_scalar_event_initialize(event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(mapObject.value.c_str())), static_cast<int>(mapObject.value.length()), 1, 1, mapObject.yamlScalarStyle);
-				yaml_emitter_emit(emitter, event);
-			}
+			yamlObject(emitter, event, mapObject, true);
 		}
 
 		yaml_mapping_end_event_initialize(event);
@@ -614,43 +325,13 @@ int MapObject::yamlMapWithUserOrder(yaml_emitter_t* emitter, yaml_event_t* event
 	return 1;
 }
 
-int MapObject::yamlSequence(yaml_emitter_t* emitter, yaml_event_t* event, const vector<MapObject>& mapObjects, int flow_style) {
+int MapObject::yamlSequence(yaml_emitter_t* emitter, yaml_event_t* event, const vector<MapObject>& mapObjects, bool withUserOrder, int flow_style) {
 	if (mapObjects.size()) {
 		yaml_sequence_start_event_initialize(event, NULL, NULL, true, !flow_style ? YAML_BLOCK_SEQUENCE_STYLE : YAML_FLOW_SEQUENCE_STYLE);
 		yaml_emitter_emit(emitter, event);
 
 		for (const MapObject& mapObject : mapObjects) {
-			if (mapObject.mapPtr->map.size())
-				yamlMap(emitter, event, mapObject.mapPtr);
-			else if (mapObject.mapObjects.size())
-				yamlSequence(emitter, event, mapObject.mapObjects, mapObject.flow ? 1 : 0);
-			else if (!mapObject.value.empty()) {
-				yaml_scalar_event_initialize(event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(mapObject.value.c_str())), static_cast<int>(mapObject.value.length()), 1, 1, mapObject.yamlScalarStyle);
-				yaml_emitter_emit(emitter, event);
-			}
-		}
-
-		yaml_sequence_end_event_initialize(event);
-		yaml_emitter_emit(emitter, event);
-	}
-	return 1;
-}
-
-int MapObject::yamlSequenceWithUserOrder(yaml_emitter_t* emitter, yaml_event_t* event, const vector<MapObject>& mapObjects,
-	int flow_style) {
-	if (mapObjects.size()) {
-		yaml_sequence_start_event_initialize(event, NULL, NULL, true, !flow_style ? YAML_BLOCK_SEQUENCE_STYLE : YAML_FLOW_SEQUENCE_STYLE);
-		yaml_emitter_emit(emitter, event);
-
-		for (const MapObject& mapObject : mapObjects) {
-			if (mapObject.mapPtr->map.size())
-				yamlMapWithUserOrder(emitter, event, mapObject.mapPtr);
-			else if (mapObject.mapObjects.size())
-				yamlSequenceWithUserOrder(emitter, event, mapObject.mapObjects, mapObject.flow ? 1 : 0);
-			else if (!mapObject.value.empty()) {
-				yaml_scalar_event_initialize(event, NULL, NULL, reinterpret_cast<yaml_char_t*>(const_cast<char*>(mapObject.value.c_str())), static_cast<int>(mapObject.value.length()), 1, 1, mapObject.yamlScalarStyle);
-				yaml_emitter_emit(emitter, event);
-			}
+			yamlObject(emitter, event, mapObject, withUserOrder, false);
 		}
 
 		yaml_sequence_end_event_initialize(event);
@@ -680,8 +361,8 @@ int MapObject::yamlDocProlog(yaml_emitter_t* emitter, yaml_event_t* event, const
 	return 1;
 }
 
-int MapObject::yamlDocEpilog(yaml_emitter_t* emitter, yaml_event_t* event) {
-	yaml_document_end_event_initialize(event, true);
+int MapObject::yamlDocEpilog(yaml_emitter_t* emitter, yaml_event_t* event, bool explicitEnd) {
+	yaml_document_end_event_initialize(event, !explicitEnd);
 	yaml_emitter_emit(emitter, event);
 
 	yaml_stream_end_event_initialize(event);

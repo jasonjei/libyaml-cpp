@@ -60,11 +60,18 @@ public:
 
 private:
 	static void hardcoreYamlProcess(MapObject& yamlMap, yaml_parser_t* parser, yaml_event_t* event);
+	void exportYamlCore(yaml_emitter_t& emitter, bool withUserOrder, const std::optional<yaml_version_directive_t>& version) const;
+	void exportYamlFile(FILE* file, bool withUserOrder, const std::optional<yaml_version_directive_t>& version = std::nullopt) const;
+	std::string exportYamlString(bool withUserOrder, const std::optional<yaml_version_directive_t>& version = std::nullopt) const;
+	static FILE* openFile(const std::string& fileName) { return fopen(fileName.c_str(), "wb"); }
+#ifdef WIN32
+	static FILE* openFile(const std::wstring& fileName) { FILE* const file; _wfopen_s(&file, fileName.c_str(), _T("wb")); return file; }
+#endif
 	static int write_handler(void* ctx, unsigned char* buffer, size_t size);
 	static int yamlDocProlog(yaml_emitter_t* emitter, yaml_event_t* event, const std::optional<yaml_version_directive_t>& version = std::nullopt);
-	static int yamlDocEpilog(yaml_emitter_t* emitter, yaml_event_t* event);
-	static int yamlSequence(yaml_emitter_t* emitter, yaml_event_t* event, const std::vector<MapObject>& mapObjects, int flow_style = 0);
-	static int yamlSequenceWithUserOrder(yaml_emitter_t* emitter, yaml_event_t* event, const std::vector<MapObject>& mapObjects, int flow_style = 0);
+	static int yamlDocEpilog(yaml_emitter_t* emitter, yaml_event_t* event, bool explicitEnd);
+	static void yamlObject(yaml_emitter_t* emitter, yaml_event_t* event, const MapObject& mapObject, bool withUserOrder, bool allowEmptyScalars = true);
+	static int yamlSequence(yaml_emitter_t* emitter, yaml_event_t* event, const std::vector<MapObject>& mapObjects, bool withUserOrder, int flow_style = 0);
 	static int yamlMap(yaml_emitter_t* emitter, yaml_event_t* event, std::shared_ptr<MapObject::mapMapObject> mapObj);
 	static int yamlMapWithUserOrder(yaml_emitter_t* emitter, yaml_event_t* event, std::shared_ptr<MapObject::mapMapObject> mapObj);
 
